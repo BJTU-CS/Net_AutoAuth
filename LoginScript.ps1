@@ -29,7 +29,7 @@ function Test-InternetConnection {
 }
 
 # 执行登录的函数，使用GET方法
-function Perform-Login {
+function Invoke-Login {
     # 获取有效的IPv4地址
     $wlan_user_ip = Get-ValidIPv4Address
 
@@ -38,11 +38,18 @@ function Perform-Login {
         return
     }
 
+    # 从环境变量获取账号和密码
+    $user_account = (Get-Item Env:BJTUEthernetAccount).value
+    $user_password = (Get-Item Env:BJTUEthernetPassword).value
+
+    if ([string]::IsNullOrWhiteSpace($user_account) -or [string]::IsNullOrWhiteSpace($user_password)) {
+        Write-Host "环境变量 BJTUEthernetAccount 或 BJTUEthernetPassword 未设置，登录终止。"
+        return
+    }
+
     # 定义参数
     $callback = "dr1004"
     $login_method = "1"
-    $user_account = "MyAccount"
-    $user_password = "MyPassword"
     $wlan_user_mac = "000000000000"
     $jsVersion = "4.2.1"
     $terminal_type = "1"
@@ -58,7 +65,7 @@ function Perform-Login {
 # 主逻辑
 if (-Not (Test-InternetConnection)) {
     Write-Host "未检测到互联网连接，尝试登录..."
-    Perform-Login
+    Invoke-Login
 } else {
     Write-Host "互联网连接正常，无需登录。"
 }

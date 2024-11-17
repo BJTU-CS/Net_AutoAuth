@@ -30,6 +30,22 @@ function Install-Task {
         return
     }
 
+    # 提示用户输入环境变量值
+    Write-Host "请输入您的账号（BJTUEthernetAccount）："
+    $account = Read-Host
+    Write-Host "请输入您的密码（BJTUEthernetPassword）："
+    $password = Read-Host
+
+    try {
+        # 设置环境变量
+        [Environment]::SetEnvironmentVariable("BJTUEthernetAccount", $account, "Machine")
+        [Environment]::SetEnvironmentVariable("BJTUEthernetPassword", $password, "Machine")
+        Write-Host "环境变量已成功设置。" -ForegroundColor Green
+    } catch {
+        Write-Host "错误：无法设置环境变量。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+        return
+    }
+
     # 创建计划任务的触发器（开机启动）
     $trigger = New-ScheduledTaskTrigger -AtStartup
 
@@ -99,7 +115,29 @@ function Uninstall-Task {
     } else {
         Write-Host "目标文件夹 $destinationFolder 非空或不存在，无需删除。" -ForegroundColor Yellow
     }
+
+    # 判断并删除环境变量
+    try {
+        # 检查 BJTUEthernetAccount 是否存在
+        if ($null -ne [Environment]::GetEnvironmentVariable("BJTUEthernetAccount", "Machine")) {
+            [Environment]::SetEnvironmentVariable("BJTUEthernetAccount", $null, "Machine")
+            Write-Host "环境变量 BJTUEthernetAccount 已成功删除。" -ForegroundColor Green
+        } else {
+            Write-Host "环境变量 BJTUEthernetAccount 不存在。" -ForegroundColor Yellow
+        }
+
+        # 检查 BJTUEthernetPassword 是否存在
+        if ($null -ne [Environment]::GetEnvironmentVariable("BJTUEthernetPassword", "Machine")) {
+            [Environment]::SetEnvironmentVariable("BJTUEthernetPassword", $null, "Machine")
+            Write-Host "环境变量 BJTUEthernetPassword 已成功删除。" -ForegroundColor Green
+        } else {
+            Write-Host "环境变量 BJTUEthernetPassword 不存在。" -ForegroundColor Yellow
+        }
+        } catch {
+            Write-Host "错误：无法删除环境变量。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+    }
 }
+
 
 
 # 如果没有管理员权限，则请求提升

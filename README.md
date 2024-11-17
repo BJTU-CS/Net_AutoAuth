@@ -22,13 +22,9 @@
    - `user_password`：你的网络密码。
 
 3. **安装开机自动启动**：
-   - 打开PowerShell，以管理员身份运行以下命令来安装开机自动运行：
-     ```powershell
-     .\install_auto_login.ps1
-     ```
+   - 右键脚本`register_auto_login.ps1`在`PowerShell`中运行：
+   - 根据提示选择`1`，安装自动登录计划
 
 4. **卸载开机自动启动**：
-   - 如果不再需要开机自动运行，可以以管理员身份运行以下命令来卸载：
-     ```powershell
-     .\uninstall_auto_login.ps1
-     ```
+   - 右键脚本`register_auto_login.ps1`在`PowerShell`中运行：
+   - 根据提示选择`2`，卸载自动登录计划

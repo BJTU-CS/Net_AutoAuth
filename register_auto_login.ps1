@@ -84,10 +84,7 @@ function Install-Task {
 
 function Uninstall-Task {
     $taskName = "BJTUNetLogin"
-    $destinationFolder = "$env:USERPROFILE\bjtu_scripts"
-    $destinationPsScriptPath = Join-Path $destinationFolder "LoginScript.ps1"
-    $destinationVbsScriptPath = Join-Path $destinationFolder "LoginScript.vbs"
-
+    
     # 检查是否已经存在同名任务
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
         try {
@@ -100,39 +97,45 @@ function Uninstall-Task {
         Write-Host "任务 $taskName 不存在。" -ForegroundColor Yellow
     }
 
-    # 检查并删除脚本文件
-    if (Test-Path $destinationPsScriptPath) {
-        try {
-            Remove-Item -Path $destinationPsScriptPath -Force
-            Write-Host "脚本文件 $destinationPsScriptPath 已成功删除。" -ForegroundColor Green
-        } catch {
-            Write-Host "错误：无法删除脚本文件 $destinationPsScriptPath。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+    # 定义删除文件或文件夹的通用函数
+    function Remove-ItemSafely {
+        param (
+            [string]$Path,
+            [string]$Type # "File" 或 "Folder"
+        )
+        if (Test-Path $Path) {
+            if ($Type -eq "Folder" -and (Get-ChildItem -Path $Path | Measure-Object).Count -ne 0) {
+                Write-Host "目标文件夹 $Path 非空，无法删除。" -ForegroundColor Yellow
+                return
+            }
+            try {
+                Remove-Item -Path $Path -Force
+                Write-Host "$Type $Path 已成功删除。" -ForegroundColor Green
+            } catch {
+                Write-Host "错误：无法删除 $Type $Path。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "$Type $Path 不存在，无需删除。" -ForegroundColor Yellow
         }
-    } else {
-        Write-Host "脚本文件 $destinationPsScriptPath 不存在，无需删除。" -ForegroundColor Yellow
     }
 
-    if (Test-Path $destinationVbsScriptPath) {
-        try {
-            Remove-Item -Path $destinationVbsScriptPath -Force
-            Write-Host "脚本文件 $destinationVbsScriptPath 已成功删除。" -ForegroundColor Green
-        } catch {
-            Write-Host "错误：无法删除脚本文件 $destinationVbsScriptPath。错误信息：$($_.Exception.Message)" -ForegroundColor Red
-        }
-    } else {
-        Write-Host "脚本文件 $destinationVbsScriptPath 不存在，无需删除。" -ForegroundColor Yellow
+    # 加载配置文件
+    $configPath = Join-Path $PSScriptRoot "config.json"
+    if (-Not (Test-Path $configPath)) {
+        Write-Host "配置文件 $configPath 不存在，请检查路径。" -ForegroundColor Red
+        exit
     }
 
-    # 检查并删除空的目标文件夹
-    if ((Test-Path $destinationFolder) -and ((Get-ChildItem -Path $destinationFolder | Measure-Object).Count -eq 0)) {
-        try {
-            Remove-Item -Path $destinationFolder -Force
-            Write-Host "空文件夹 $destinationFolder 已成功删除。" -ForegroundColor Green
-        } catch {
-            Write-Host "错误：无法删除文件夹 $destinationFolder。错误信息：$($_.Exception.Message)" -ForegroundColor Red
-        }
-    } else {
-        Write-Host "目标文件夹 $destinationFolder 非空或不存在，无需删除。" -ForegroundColor Yellow
+    $config = Get-Content -Path $configPath | ConvertFrom-Json
+
+    # 删除配置文件中定义的文件
+    foreach ($file in $config.files) {
+        Remove-ItemSafely -Path $file -Type "File"
+    }
+
+    # 删除配置文件中定义的文件夹
+    foreach ($folder in $config.folders) {
+        Remove-ItemSafely -Path $folder -Type "Folder"
     }
 
     # 判断并删除环境变量

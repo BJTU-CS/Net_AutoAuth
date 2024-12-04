@@ -1,24 +1,16 @@
 # 获取当前用户的文档路径
 $logFile = '~/bjtu_scripts/Net_AutoAuth_logfile.log'
-
-# 检查并创建文件夹（如果不存在）
-$logDirectory = [System.IO.Path]::GetDirectoryName($logFile)
-# 检查文件夹是否存在，若不存在则创建
-if (-Not (Test-Path -Path $logDirectory)) {
-    New-Item -Path $logDirectory -ItemType Directory -Force
-}
+$Mode = "INFO"  # 默认是 INFO 模式
 
 # 检查日志文件是否存在，若不存在则创建
-if (-Not (Test-Path -Path $logFile)) {
+if (-Not (Test-Path -Path $logFile) -and ($Mode -eq "DEBUG")) {
     New-Item -Path $logFile -ItemType File -Force
 }
 # 写入日志的函数
 function Write-Log {
     param (
-        [string]$message,
-        [string]$Mode = "INFO"  # 默认是 INFO 模式
+        [string]$message
     )
-    
     # 获取当前时间戳
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     

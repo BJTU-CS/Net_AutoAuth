@@ -1,0 +1,10 @@
+{
+  "files": [
+    "~\\bjtu_scripts\\LoginScript.ps1",
+    "~\\bjtu_scripts\\LoginScript.vbs",
+    "~\\bjtu_scripts\\Net_AutoAuth_logfile.log"
+  ],
+  "folders": [
+    "~\\bjtu_scripts"
+  ]
+}

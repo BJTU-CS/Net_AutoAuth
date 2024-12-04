@@ -46,14 +46,18 @@ function Install-Task {
         return
     }
 
-    # 创建计划任务的触发器（开机启动）
-    $trigger = New-ScheduledTaskTrigger -AtStartup
+    # 创建计划任务的触发器（用户登录时触发）
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
 
     # 创建计划任务的操作
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$destinationScriptPath`""
 
     # 运行计划任务时不需要用户登录
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -DontStopOnIdleEnd
+
+    # 使用指定的用户创建任务
+    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name # 获取用户名
+    $password = Read-Host "输入当前计算机用户的密码，如果为空则直接回车"
 
     # 检查是否已经存在同名任务
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
@@ -68,8 +72,13 @@ function Install-Task {
 
     # 注册计划任务
     try {
-        Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -User "System" -RunLevel Highest
-        Write-Host "任务 $taskName 已成功注册，并将在启动时运行。" -ForegroundColor Green
+        if ($password.Length -eq 0) {
+            Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -User "$user" -Description "BJTU Net Auto Login" -Force
+            Write-Host "任务 $taskName 已成功注册，并将在启动时运行。" -ForegroundColor Green
+        } else {
+            Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -User "$user" -Password $password -Description "BJTU Net Auto Login" -Force
+            Write-Host "任务 $taskName 已成功注册，并将在启动时运行。" -ForegroundColor Green
+        }
     } catch {
         Write-Host "错误：无法注册任务 $taskName。错误信息：$($_.Exception.Message)" -ForegroundColor Red
     }

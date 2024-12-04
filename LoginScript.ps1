@@ -1,5 +1,5 @@
 # 获取当前用户的文档路径
-$logFile = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('MyDocuments'), 'Net_AutoAuth_logfile.log')
+$logFile = '~/bjtu_scripts/Net_AutoAuth_logfile.log'
 
 # 检查并创建文件夹（如果不存在）
 $logDirectory = [System.IO.Path]::GetDirectoryName($logFile)
@@ -15,17 +15,24 @@ if (-Not (Test-Path -Path $logFile)) {
 # 写入日志的函数
 function Write-Log {
     param (
-        [string]$message
+        [string]$message,
+        [string]$Mode = "INFO"  # 默认是 INFO 模式
     )
+    
     # 获取当前时间戳
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    
     # 构建日志消息
     $logMessage = "$timestamp - $message"
-    # 写入日志文件，确保使用 UTF-8 编码
-    Add-Content -Path $logFile -Value $logMessage -Encoding UTF8
-    # 也输出到控制台
+    
+    # 判断模式
+    if ($Mode -eq "DEBUG") {
+        # DEBUG 模式：打印到控制台并写入日志文件
+        Add-Content -Path $logFile -Value $logMessage -Encoding UTF8
+    }
     Write-Host $message
 }
+
 
 # 获取排除部分内网IPv4地址的函数
 function Get-ValidIPv4Address {

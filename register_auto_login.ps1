@@ -6,13 +6,19 @@ function Test-Admin {
 function Install-Task {
     # 定义任务名称和脚本路径
     $taskName = "BJTUNetLogin"
-    $sourceScriptPath = Join-Path $PSScriptRoot "LoginScript.ps1"  # 使用 $PSScriptRoot
+    $sourcePsScriptPath = Join-Path $PSScriptRoot "LoginScript.ps1"
+    $sourceVbsScriptPath = Join-Path $PSScriptRoot "LoginScript.vbs"
     $destinationFolder = "$env:USERPROFILE\bjtu_scripts"
-    $destinationScriptPath = Join-Path $destinationFolder "LoginScript.ps1"
+    $destinationPsScriptPath = Join-Path $destinationFolder "LoginScript.ps1"
+    $destinationVbsScriptPath = Join-Path $destinationFolder "LoginScript.vbs"
 
     # 检查源脚本路径是否存在
-    if (-Not (Test-Path $sourceScriptPath)) {
-        Write-Host "错误：源脚本路径不存在：$sourceScriptPath" -ForegroundColor Red
+    if (-Not (Test-Path $sourcePsScriptPath)) {
+        Write-Host "错误：源 PowerShell 脚本路径不存在：$sourcePsScriptPath" -ForegroundColor Red
+        return
+    }
+    if (-Not (Test-Path $sourceVbsScriptPath)) {
+        Write-Host "错误：源 VBScript 脚本路径不存在：$sourceVbsScriptPath" -ForegroundColor Red
         return
     }
 
@@ -23,8 +29,9 @@ function Install-Task {
 
     # 复制脚本到目标位置
     try {
-        Copy-Item -Path $sourceScriptPath -Destination $destinationScriptPath -Force
-        Write-Host "脚本已成功复制到：$destinationScriptPath" -ForegroundColor Green
+        Copy-Item -Path $sourcePsScriptPath -Destination $destinationPsScriptPath -Force
+        Copy-Item -Path $sourceVbsScriptPath -Destination $destinationVbsScriptPath -Force
+        Write-Host "脚本已成功复制到：$destinationFolder" -ForegroundColor Green
     } catch {
         Write-Host "错误：无法复制脚本到目标位置。错误信息：$($_.Exception.Message)" -ForegroundColor Red
         return
@@ -49,15 +56,11 @@ function Install-Task {
     # 创建计划任务的触发器（用户登录时触发）
     $trigger = New-ScheduledTaskTrigger -AtLogOn
 
-    # 创建计划任务的操作
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$destinationScriptPath`""
+    # 创建计划任务的操作，使用 VBScript
+    $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$destinationVbsScriptPath`""
 
     # 运行计划任务时不需要用户登录
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -DontStopOnIdleEnd
-
-    # 使用指定的用户创建任务
-    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name # 获取用户名
-    $password = Read-Host "输入当前计算机用户的密码，如果为空则直接回车"
 
     # 检查是否已经存在同名任务
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
@@ -72,13 +75,8 @@ function Install-Task {
 
     # 注册计划任务
     try {
-        if ($password.Length -eq 0) {
-            Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -User "$user" -Description "BJTU Net Auto Login" -Force
-            Write-Host "任务 $taskName 已成功注册，并将在启动时运行。" -ForegroundColor Green
-        } else {
-            Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -User "$user" -Password $password -Description "BJTU Net Auto Login" -Force
-            Write-Host "任务 $taskName 已成功注册，并将在启动时运行。" -ForegroundColor Green
-        }
+        Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings -Description "BJTU Net Auto Login" -Force
+        Write-Host "任务 $taskName 已成功注册，并将在启动时运行。" -ForegroundColor Green
     } catch {
         Write-Host "错误：无法注册任务 $taskName。错误信息：$($_.Exception.Message)" -ForegroundColor Red
     }
@@ -87,7 +85,8 @@ function Install-Task {
 function Uninstall-Task {
     $taskName = "BJTUNetLogin"
     $destinationFolder = "$env:USERPROFILE\bjtu_scripts"
-    $destinationScriptPath = Join-Path $destinationFolder "LoginScript.ps1"
+    $destinationPsScriptPath = Join-Path $destinationFolder "LoginScript.ps1"
+    $destinationVbsScriptPath = Join-Path $destinationFolder "LoginScript.vbs"
 
     # 检查是否已经存在同名任务
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
@@ -102,15 +101,26 @@ function Uninstall-Task {
     }
 
     # 检查并删除脚本文件
-    if (Test-Path $destinationScriptPath) {
+    if (Test-Path $destinationPsScriptPath) {
         try {
-            Remove-Item -Path $destinationScriptPath -Force
-            Write-Host "脚本文件 $destinationScriptPath 已成功删除。" -ForegroundColor Green
+            Remove-Item -Path $destinationPsScriptPath -Force
+            Write-Host "脚本文件 $destinationPsScriptPath 已成功删除。" -ForegroundColor Green
         } catch {
-            Write-Host "错误：无法删除脚本文件 $destinationScriptPath。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "错误：无法删除脚本文件 $destinationPsScriptPath。错误信息：$($_.Exception.Message)" -ForegroundColor Red
         }
     } else {
-        Write-Host "脚本文件 $destinationScriptPath 不存在，无需删除。" -ForegroundColor Yellow
+        Write-Host "脚本文件 $destinationPsScriptPath 不存在，无需删除。" -ForegroundColor Yellow
+    }
+
+    if (Test-Path $destinationVbsScriptPath) {
+        try {
+            Remove-Item -Path $destinationVbsScriptPath -Force
+            Write-Host "脚本文件 $destinationVbsScriptPath 已成功删除。" -ForegroundColor Green
+        } catch {
+            Write-Host "错误：无法删除脚本文件 $destinationVbsScriptPath。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "脚本文件 $destinationVbsScriptPath 不存在，无需删除。" -ForegroundColor Yellow
     }
 
     # 检查并删除空的目标文件夹
@@ -127,7 +137,6 @@ function Uninstall-Task {
 
     # 判断并删除环境变量
     try {
-        # 检查 BJTUEthernetAccount 是否存在
         if ($null -ne [Environment]::GetEnvironmentVariable("BJTUEthernetAccount", "Machine")) {
             [Environment]::SetEnvironmentVariable("BJTUEthernetAccount", $null, "Machine")
             Write-Host "环境变量 BJTUEthernetAccount 已成功删除。" -ForegroundColor Green
@@ -135,19 +144,16 @@ function Uninstall-Task {
             Write-Host "环境变量 BJTUEthernetAccount 不存在。" -ForegroundColor Yellow
         }
 
-        # 检查 BJTUEthernetPassword 是否存在
         if ($null -ne [Environment]::GetEnvironmentVariable("BJTUEthernetPassword", "Machine")) {
             [Environment]::SetEnvironmentVariable("BJTUEthernetPassword", $null, "Machine")
             Write-Host "环境变量 BJTUEthernetPassword 已成功删除。" -ForegroundColor Green
         } else {
             Write-Host "环境变量 BJTUEthernetPassword 不存在。" -ForegroundColor Yellow
         }
-        } catch {
-            Write-Host "错误：无法删除环境变量。错误信息：$($_.Exception.Message)" -ForegroundColor Red
+    } catch {
+        Write-Host "错误：无法删除环境变量。错误信息：$($_.Exception.Message)" -ForegroundColor Red
     }
 }
-
-
 
 # 如果没有管理员权限，则请求提升
 if (-Not (Test-Admin)) {
